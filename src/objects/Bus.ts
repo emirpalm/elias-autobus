@@ -47,12 +47,14 @@ export class Bus extends Phaser.GameObjects.Container {
     this.glass = scene.add.image(0, 0, 'bus-glass');
     this.door = scene.add.image(DOOR_LOCAL_X, 8, 'bus-door');
     const driverX = BUS.DRIVER_X + BUS.WIN_W / 2 - BUS.W / 2;
-    // el conductor va DEBAJO del cristal para verse "dentro" de la cabina
+    // el conductor va DEBAJO del cristal para verse "dentro" de la cabina;
+    // origen en los "pies" (fuera de la ventana) para que el vaivén mueva la cabeza
     const driver = scene.add
-      .image(driverX, -29, 'maleAdventurer_idle')
-      .setOrigin(0.5, 0)
+      .image(driverX, -29 + CHAR_FRAME.H * 0.45, 'maleAdventurer_idle')
+      .setOrigin(0.5, 1)
       .setScale(0.45);
     driver.setCrop(0, 0, CHAR_FRAME.W, CHAR_FRAME.BUST_H);
+    this.startDance(driver, true);
     this.cab = scene.add.container(0, 0, [
       body,
       driver,
@@ -188,17 +190,49 @@ export class Bus extends Phaser.GameObjects.Container {
     const seatIndex = this.occupants.findIndex((o) => o === null);
     if (seatIndex === -1) return false;
     const seat = this.seats[seatIndex];
-    // busto recortado: solo cabeza y hombros asoman por la ventana
+    // busto recortado: solo cabeza y hombros asoman por la ventana;
+    // origen en los "pies" para que el bailecito incline la cabeza
+    const scale = kind === 'kid' ? 0.34 : 0.45;
+    const topY = seat.y + (kind === 'kid' ? 8 : 0);
     const seated = this.scene.add
-      .image(seat.x, seat.y + (kind === 'kid' ? 8 : 0), `${charKey}_idle`)
-      .setOrigin(0.5, 0)
-      .setScale(kind === 'kid' ? 0.34 : 0.45)
+      .image(seat.x, topY + CHAR_FRAME.H * scale, `${charKey}_idle`)
+      .setOrigin(0.5, 1)
+      .setScale(scale)
       .setAlpha(0);
     seated.setCrop(0, 0, CHAR_FRAME.W, CHAR_FRAME.BUST_H);
     this.cab.addAt(seated, this.cab.getIndex(this.glass));
     this.scene.tweens.add({ targets: seated, alpha: 1, duration: 260 });
+    this.startDance(seated);
     this.occupants[seatIndex] = { seatIndex, sprite: seated, kind, charKey, dest };
     return true;
+  }
+
+  /** Bailecito: cabeceo hacia abajo (nunca asoma sobre la ventana) + vaivén. */
+  private startDance(
+    target: Phaser.GameObjects.Image,
+    subtle = false,
+  ): void {
+    const bob = subtle ? 1.2 : 2.6;
+    const sway = subtle ? 1.2 : 3;
+    this.scene.tweens.add({
+      targets: target,
+      y: target.y + bob,
+      duration: 280 + Math.random() * 160,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Math.random() * 400,
+    });
+    target.setAngle(-sway);
+    this.scene.tweens.add({
+      targets: target,
+      angle: sway,
+      duration: 460 + Math.random() * 240,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Math.random() * 400,
+    });
   }
 
   /** Baja a un ocupante: desvanece su sprite y libera el asiento. */
