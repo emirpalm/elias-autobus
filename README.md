@@ -3,6 +3,12 @@
 Juego web 2D de un autobús que recorre la ciudad recogiendo pasajeros.
 Phaser 3 + TypeScript + Vite, corriendo en Docker.
 
+**🎮 Juégalo en línea: https://emirpalm.github.io/elias-autobus/**
+(se publica solo con cada push a `main` vía GitHub Actions)
+
+Tres rutas: 🏘️ Vecindario (corta), 🌙 Nocturna (centro + noche) y
+🏖️ A la Playa (larga, con lluvia). Cada una guarda tu récord (⭐ y puntos).
+
 ## Cómo jugar
 
 - **← →** conducir (avanzar / frenar / reversa)
