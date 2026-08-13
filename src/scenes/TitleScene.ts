@@ -113,7 +113,7 @@ export class TitleScene extends Phaser.Scene {
 
   private startRoute(route: RouteDef): void {
     unlockAudio();
-    startMusic();
+    void startMusic();
     this.scene.start('Game', { routeId: route.id });
   }
 }

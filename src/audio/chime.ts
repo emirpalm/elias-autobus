@@ -11,8 +11,9 @@ let engineGain: GainNode | null = null;
 let hornOscs: OscillatorNode[] | null = null;
 let hornGain: GainNode | null = null;
 let rainSrc: AudioBufferSourceNode | null = null;
-let musicTimer: number | null = null;
-let musicStep = 0;
+let musicBuf: AudioBuffer | null = null;
+let musicSrc: AudioBufferSourceNode | null = null;
+let musicLoading = false;
 
 function audio(): AudioContext {
   if (!ctx) {
@@ -110,66 +111,35 @@ export function stopRain(): void {
   rainSrc = null;
 }
 
-// ---- Música de fondo: lazo generativo pentatónico (marimba + bajo) ----
+// ---- Música de fondo: assets/fondo.mp3 en loop por el canal maestro ----
 
-const MUSIC_SCALE = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
-const MUSIC_MELODY = [
-  0, -1, 2, -1, 4, -1, 3, 2, 1, -1, 3, -1, 2, -1, 0, -1, 2, -1, 4, -1, 5, -1,
-  4, 3, 2, -1, 1, -1, 0, -1, -1, -1,
-];
-const MUSIC_BASS = [261.63, 196.0, 220.0, 196.0];
-const MUSIC_STEP = 0.27;
-
-function scheduleMusicStep(t: number, step: number): void {
-  if (!ctx) return;
-  if (step % 8 === 0) {
-    const bass = ctx.createOscillator();
-    bass.type = 'triangle';
-    bass.frequency.value = MUSIC_BASS[(step / 8) % 4];
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.05, t + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + MUSIC_STEP * 7.5);
-    bass.connect(gain).connect(out());
-    bass.start(t);
-    bass.stop(t + MUSIC_STEP * 8);
-  }
-  const note = MUSIC_MELODY[step];
-  if (note >= 0) {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = MUSIC_SCALE[note];
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.055, t + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-    osc.connect(gain).connect(out());
-    osc.start(t);
-    osc.stop(t + 0.4);
-  }
-}
-
-export function startMusic(): void {
+export async function startMusic(): Promise<void> {
   const ac = audio();
-  if (musicTimer !== null) return;
-  let next = ac.currentTime + 0.05;
-  const tick = () => {
-    if (!ctx) return;
-    while (next < ctx.currentTime + 0.7) {
-      scheduleMusicStep(next, musicStep);
-      musicStep = (musicStep + 1) % MUSIC_MELODY.length;
-      next += MUSIC_STEP;
+  if (musicSrc || musicLoading) return;
+  musicLoading = true;
+  try {
+    if (!musicBuf) {
+      const res = await fetch('assets/fondo.mp3');
+      musicBuf = await ac.decodeAudioData(await res.arrayBuffer());
     }
-  };
-  tick();
-  musicTimer = window.setInterval(tick, 250);
+    if (musicSrc) return;
+    musicSrc = ac.createBufferSource();
+    musicSrc.buffer = musicBuf;
+    musicSrc.loop = true;
+    const gain = ac.createGain();
+    gain.gain.value = 0.35;
+    musicSrc.connect(gain).connect(out());
+    musicSrc.start();
+  } catch {
+    // sin códec o sin red: el juego sigue sin música
+  } finally {
+    musicLoading = false;
+  }
 }
 
 export function stopMusic(): void {
-  if (musicTimer !== null) {
-    clearInterval(musicTimer);
-    musicTimer = null;
-  }
+  musicSrc?.stop();
+  musicSrc = null;
 }
 
 /** Silbido de puerta neumática: ráfaga de ruido filtrado con caída rápida. */

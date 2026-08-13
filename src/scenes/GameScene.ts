@@ -281,6 +281,9 @@ export class GameScene extends Phaser.Scene {
     kb.addKey(Phaser.Input.Keyboard.KeyCodes.M).on('down', () => {
       this.muteIcon.setText(toggleMute() ? '🔇' : '🔊');
     });
+    kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () =>
+      this.scene.start('Title'),
+    );
 
     if (this.sys.game.device.input.touch) this.createTouchButtons();
   }
@@ -336,6 +339,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setScrollFactor(0)
       .setDepth(100);
+    // botón para volver al menú (también con ESC)
+    this.add
+      .text(GAME_WIDTH - 56, 12, '🏠', { fontSize: '20px' })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.scene.start('Title'));
     this.bubble = this.add
       .text(0, 0, '', { fontFamily: FONT, fontSize: '20px', color: '#ffffff' })
       .setOrigin(0.5, 1)
@@ -347,7 +358,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         GAME_HEIGHT - 28,
-        '←  →  conducir  ·  ESPACIO claxon  ·  M sonido  ·  frena en la parada: suben y bajan',
+        '←  →  conducir  ·  ESPACIO claxon  ·  M sonido  ·  ESC menú  ·  frena en la parada: suben y bajan',
         { fontFamily: FONT, fontSize: '18px', color: '#ffffff' },
       )
       .setOrigin(0.5)
