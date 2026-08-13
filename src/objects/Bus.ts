@@ -35,6 +35,13 @@ export class Bus extends Phaser.GameObjects.Container {
   private wheels: Phaser.GameObjects.Image[];
   private seats: Array<{ x: number; y: number }> = [];
   private occupants: Array<Occupant | null> = [];
+  private dancers: Array<{
+    img: Phaser.GameObjects.Image;
+    baseY: number;
+    subtle: boolean;
+  }> = [];
+  private danceTweens: Phaser.Tweens.Tween[] = [];
+  private dancing = false;
   private _speed = 0;
   private elapsed = 0;
   private worldWidth: number;
@@ -54,7 +61,7 @@ export class Bus extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 1)
       .setScale(0.45);
     driver.setCrop(0, 0, CHAR_FRAME.W, CHAR_FRAME.BUST_H);
-    this.startDance(driver, true);
+    this.registerDancer(driver, true);
     this.cab = scene.add.container(0, 0, [
       body,
       driver,
@@ -202,42 +209,75 @@ export class Bus extends Phaser.GameObjects.Container {
     seated.setCrop(0, 0, CHAR_FRAME.W, CHAR_FRAME.BUST_H);
     this.cab.addAt(seated, this.cab.getIndex(this.glass));
     this.scene.tweens.add({ targets: seated, alpha: 1, duration: 260 });
-    this.startDance(seated);
+    this.registerDancer(seated);
     this.occupants[seatIndex] = { seatIndex, sprite: seated, kind, charKey, dest };
     return true;
   }
 
-  /** Bailecito: cabeceo hacia abajo (nunca asoma sobre la ventana) + vaivén. */
-  private startDance(
-    target: Phaser.GameObjects.Image,
+  /** Da de alta un bailarín; empieza a moverse solo si ya suena la música. */
+  private registerDancer(
+    img: Phaser.GameObjects.Image,
     subtle = false,
   ): void {
-    const bob = subtle ? 1.2 : 2.6;
-    const sway = subtle ? 1.2 : 3;
-    this.scene.tweens.add({
-      targets: target,
-      y: target.y + bob,
-      duration: 280 + Math.random() * 160,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: Math.random() * 400,
-    });
-    target.setAngle(-sway);
-    this.scene.tweens.add({
-      targets: target,
-      angle: sway,
-      duration: 460 + Math.random() * 240,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: Math.random() * 400,
-    });
+    const dancer = { img, baseY: img.y, subtle };
+    this.dancers.push(dancer);
+    if (this.dancing) this.startDanceFor(dancer);
+  }
+
+  /** Bailecito: cabeceo hacia abajo (nunca asoma sobre la ventana) + vaivén. */
+  private startDanceFor(d: {
+    img: Phaser.GameObjects.Image;
+    baseY: number;
+    subtle: boolean;
+  }): void {
+    if (!d.img.active) return;
+    const bob = d.subtle ? 1.2 : 2.6;
+    const sway = d.subtle ? 1.2 : 3;
+    d.img.setAngle(-sway);
+    this.danceTweens.push(
+      this.scene.tweens.add({
+        targets: d.img,
+        y: d.baseY + bob,
+        duration: 280 + Math.random() * 160,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        delay: Math.random() * 400,
+      }),
+      this.scene.tweens.add({
+        targets: d.img,
+        angle: sway,
+        duration: 460 + Math.random() * 240,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        delay: Math.random() * 400,
+      }),
+    );
+  }
+
+  /** Prende/apaga el baile de todos (se llama según suene la música). */
+  setDancing(on: boolean): void {
+    if (on === this.dancing) return;
+    this.dancing = on;
+    if (on) {
+      for (const d of this.dancers) this.startDanceFor(d);
+    } else {
+      for (const tween of this.danceTweens) tween.stop();
+      this.danceTweens = [];
+      for (const d of this.dancers) {
+        if (d.img.active) {
+          d.img.setY(d.baseY);
+          d.img.setAngle(0);
+        }
+      }
+    }
   }
 
   /** Baja a un ocupante: desvanece su sprite y libera el asiento. */
   async removePassenger(occ: Occupant): Promise<void> {
     this.occupants[occ.seatIndex] = null;
+    this.dancers = this.dancers.filter((d) => d.img !== occ.sprite);
     await tweenP(this.scene, { targets: occ.sprite, alpha: 0, duration: 240 });
     occ.sprite.destroy();
   }

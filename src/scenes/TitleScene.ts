@@ -10,7 +10,7 @@ import {
   SKYLINE_Y,
   type RouteDef,
 } from '../config';
-import { startMusic, unlockAudio } from '../audio/chime';
+import { isMusicPlaying, startMusic, unlockAudio } from '../audio/chime';
 import { Bus } from '../objects/Bus';
 
 const FONT = '"Segoe UI", system-ui, sans-serif';
@@ -32,7 +32,13 @@ export class TitleScene extends Phaser.Scene {
     this.add.tileSprite(0, HOUSES_Y, GAME_WIDTH, 210, 'houses').setOrigin(0);
     this.add.tileSprite(0, SIDEWALK_TOP, GAME_WIDTH, 34, 'sidewalk').setOrigin(0);
     this.add.tileSprite(0, ROAD_TOP, GAME_WIDTH, 110, 'road').setOrigin(0);
-    new Bus(this, 300, BUS_Y, 2000);
+    const bus = new Bus(this, 300, BUS_Y, 2000);
+    // el chofer baila en el menú si la música sigue sonando
+    this.time.addEvent({
+      delay: 400,
+      loop: true,
+      callback: () => bus.setDancing(isMusicPlaying()),
+    });
 
     this.add
       .text(GAME_WIDTH / 2, 92, 'El Autobús de Elías 🚌', {

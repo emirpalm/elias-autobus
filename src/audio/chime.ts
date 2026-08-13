@@ -142,6 +142,11 @@ export function stopMusic(): void {
   musicSrc = null;
 }
 
+/** true si la música de fondo se está oyendo (cargada, sin silenciar). */
+export function isMusicPlaying(): boolean {
+  return musicSrc !== null && !muted && ctx !== null && ctx.state === 'running';
+}
+
 /** Silbido de puerta neumática: ráfaga de ruido filtrado con caída rápida. */
 export function playDoorHiss(): void {
   if (!ctx) return;

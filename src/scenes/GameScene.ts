@@ -16,6 +16,7 @@ import {
 } from '../config';
 import {
   isAudioReady,
+  isMusicPlaying,
   playBrakeSqueak,
   playDing,
   playFanfare,
@@ -384,6 +385,7 @@ export class GameScene extends Phaser.Scene {
     const night = this.updateDayNight(time);
     this.updateZones(scrollX, night);
     this.streetLife.update(time, this.bus.x, this.bus.speed);
+    this.bus.setDancing(isMusicPlaying());
 
     setEngine(Math.abs(this.bus.speed) / this.bus.maxSpeed);
     if (
